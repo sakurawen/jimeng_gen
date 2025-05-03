@@ -8,7 +8,6 @@ import hmac
 import time
 import requests
 from dotenv import load_dotenv
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 load_dotenv()
 
@@ -84,12 +83,11 @@ def signV4Request(access_key, secret_key, service, req_query, req_body):
 
 
 class VideoGenerator:
-    def __init__(self, ak, sk, images_dir='images', max_workers=1):
+    def __init__(self,ak,sk,images_dir='images'):
         self.ak = ak
         self.sk = sk
         self.images_dir = images_dir
         self.image_extensions = ('.jpg', '.jpeg')
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
 
     def query_task(self,task_id:str,filename:str):
@@ -162,22 +160,9 @@ class VideoGenerator:
         return None
 
     def generate_video_from_images(self):
-        # Get all image files
-        image_files = [filename for filename in os.listdir(self.images_dir) 
-                      if filename.lower().endswith(self.image_extensions)]
-        
-        # Process files using thread pool
-        futures = []
-        for filename in image_files:
-            future = self.executor.submit(self.process_image, filename)
-            futures.append(future)
-        
-        # Wait for all tasks to complete
-        for future in as_completed(futures):
-            try:
-                future.result()
-            except Exception as e:
-                print(f'Error in thread execution: {str(e)}')
+        for filename in os.listdir(self.images_dir):
+            if filename.lower().endswith(self.image_extensions):
+                self.process_image(filename)
 
 if __name__=='__main__':
   AK = os.getenv('access_key')
