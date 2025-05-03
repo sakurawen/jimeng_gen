@@ -83,35 +83,14 @@ def signV4Request(access_key, secret_key, service, req_query, req_body):
 
 
 class VideoGenerator:
-  def __init__(self,ak,sk,images_dir='images'):
-      self.ak = ak
-      self.sk = sk
-      self.images_dir = images_dir
-      self.image_extensions = ('.jpg', '.jpeg')
+    def __init__(self,ak,sk,images_dir='images'):
+        self.ak = ak
+        self.sk = sk
+        self.images_dir = images_dir
+        self.image_extensions = ('.jpg', '.jpeg')
 
-  def process_image(self,filename):
-    try:
-      file_path = os.path.join(self.images_dir,filename)
-      with open(file_path,'rb') as image_file:
-        image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
-        create_body = {
-          'prompt':"人像简单动一下眨一眨眼睛，只要大头照",
-          "req_key": "jimeng_vgfm_i2v_l20",
-          'binary_data_base64': [image_base64],
-        }
-        create_params = {
-          "Action":"CVSync2AsyncSubmitTask",
-          "Version":"2022-08-31"
-        }
-        formatted_create_params  = formatQuery(create_params)
-        formatted_create_body = json.dumps(create_body)
-        create_resp = signV4Request(self.ak,self.sk,service,formatted_create_params,formatted_create_body)
-        create_resp_json = create_resp.json()
-        print(f'{create_resp_json=}')
-        if not create_resp_json['data'] or not create_resp_json['data']['task_id']:
-            return None
-        task_id = create_resp_json['data']['task_id']
-        print(f'图{filename=}生视频任务创建成功,{task_id=}')
+
+    def query_task(self,task_id:str,filename:str):
         query_body = {
             'req_key':"jimeng_vgfm_i2v_l20",
             'task_id':task_id
@@ -136,7 +115,7 @@ class VideoGenerator:
                         video_path = os.path.join('video', f"{os.path.splitext(filename)[0]}.mp4")
                         with open(video_path, 'wb') as f:
                             f.write(response.content)
-                        print(f"Video saved to {video_path}")
+                        print(f"视频创建成功，保存在{video_path}")
                     else:
                         print(f"Failed to download video for {filename}")
                 return query_resp_json
@@ -144,14 +123,46 @@ class VideoGenerator:
                 print(f"{filename}视频结果查询中, 重试第{i+1}次...")
                 time.sleep(5)
 
-    except Exception as e:
-      print(f'Error processing {filename}:{str(e)}')
-      return None
 
-  def generate_video_from_images(self):
-    for filename in os.listdir(self.images_dir):
-      if filename.lower().endswith(self.image_extensions):
-        self.process_image(filename)
+    def create_task(self,file_path:str,filename:str):
+        with open(file_path,'rb') as image_file:
+            image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            create_body = {
+                'prompt':"人像简单动一下眨一眨眼睛，只要大头照",
+                "req_key": "jimeng_vgfm_i2v_l20",
+                'binary_data_base64': [image_base64],
+            }
+            create_params = {
+                "Action":"CVSync2AsyncSubmitTask",
+                "Version":"2022-08-31"
+            }
+            formatted_create_params  = formatQuery(create_params)
+            formatted_create_body = json.dumps(create_body)
+            create_resp = signV4Request(self.ak,self.sk,service,formatted_create_params,formatted_create_body)
+            create_resp_json = create_resp.json()
+            if not create_resp_json['data'] or not create_resp_json['data']['task_id']:
+                print(f'{filename} 视频任务创建失败')
+                return None
+            task_id = create_resp_json['data']['task_id']
+            print(f'{filename}对应的视频任务创建成功，{task_id=}')  
+            return task_id      
+
+
+    def process_image(self,filename):
+        try:
+            file_path = os.path.join(self.images_dir,filename)
+            task_id = self.create_task(file_path,filename)
+            if not task_id:
+                return None
+            self.query_task(task_id,filename)
+        except Exception as e:
+            print(f'Error processing {filename}:{str(e)}')
+        return None
+
+    def generate_video_from_images(self):
+        for filename in os.listdir(self.images_dir):
+            if filename.lower().endswith(self.image_extensions):
+                self.process_image(filename)
 
 if __name__=='__main__':
   AK = os.getenv('access_key')
