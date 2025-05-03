@@ -1,2 +1,3 @@
 run:
-	python gen.py
+	uv run main.py
+  

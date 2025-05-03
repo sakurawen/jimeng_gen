@@ -3,6 +3,9 @@ import base64
 import time
 import requests
 from volcengine.visual.VisualService import VisualService
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class VideoGenerator:
     def __init__(self, ak, sk, images_dir='images'):
@@ -66,7 +69,7 @@ class VideoGenerator:
                                 print(f"Failed to download video for {filename}")
                         return query_resp
                     else:
-                        print(f"{filename}视频结果查询中, 重试第f{i+1}次...")
+                        print(f"{filename}视频结果查询中, 重试第{i+1}次...")
                         time.sleep(5)
 
         except Exception as e:
@@ -87,8 +90,8 @@ class VideoGenerator:
 
 if __name__ == '__main__':
     # 配置
-    AK = ''
-    SK = ''
+    AK = os.getenv('access_key')
+    SK = os.getenv('sceret_key')
     
     # 创建视频生成器
     generator = VideoGenerator(AK, SK)
