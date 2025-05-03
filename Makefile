@@ -1,3 +1,3 @@
 run:
-	uv run main.py
+	uv run jimeng_gen/main.py
   
